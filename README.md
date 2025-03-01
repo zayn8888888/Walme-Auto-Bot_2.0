@@ -53,6 +53,11 @@ host:port:username:password
 
 ## Usage
 
+### How to get tokens?
+- F12 on dashboard
+- Go to Local Storage
+- Copy Access Token
+
 Start the bot with:
 ```bash
 npm start
