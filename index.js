@@ -306,8 +306,10 @@ async function saveCompletedTasks(completedTasks) {
 
 function startCountdown() {
   const nextRun = new Date();
-  nextRun.setHours(nextRun.getHours() + 12);
-  const totalMs = 12 * 60 * 60 * 1000;
+  // 20-24 random
+  const nextHour = Math.floor(Math.random() * 5) + 20;
+  nextRun.setHours(nextRun.getHours() + nextHour);
+  const totalMs = nextHour * 60 * 60 * 1000;
 
   const interval = setInterval(() => {
     const now = new Date();
