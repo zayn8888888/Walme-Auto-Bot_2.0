@@ -402,18 +402,16 @@ async function runBot() {
     console.log(chalk.cyan.bold("   Walme Auto Bot - Airdrop Insiders   "));
     console.log(chalk.cyan.bold("═══════════════════════════════════════"));
 
-    console.log(chalk.white("🔑 [INFO] Fetching access tokens..."));
-    const tokens = await getAccessTokens();
-    console.log(
-      chalk.white(`🔑 [INFO] ${tokens.length} tokens fetched successfully`)
-    );
-
-    console.log(chalk.white("🌐 [INFO] Loading proxies..."));
-    const proxies = await getProxies();
-
-    // let completedTasks = await loadCompletedTasks();
-
     while (true) {
+      console.log(chalk.white("🔑 [INFO] Fetching access tokens..."));
+      const tokens = await getAccessTokens();
+      console.log(
+        chalk.white(`🔑 [INFO] ${tokens.length} tokens fetched successfully`)
+      );
+
+      console.log(chalk.white("🌐 [INFO] Loading proxies..."));
+      const proxies = await getProxies();
+
       console.log(chalk.cyan("─".repeat(40)));
 
       for (let i = 0; i < tokens.length; i++) {
