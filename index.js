@@ -16,6 +16,27 @@ const PROFILE_URL = "https://api.walme.io/user/profile";
 const COMPLETED_TASKS_FILE = "completed_tasks.json";
 const PROXIES_FILE = "proxies.txt";
 
+
+const HEADERS = {
+  Accept: "application/json",
+  "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+  "Content-Type": "application/json",
+  Origin: "https://waitlist.walme.io",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  Priority: "u=1, i",
+  Referer: "https://waitlist.walme.io/",
+  "Sec-Ch-Ua":
+    '"Chromium";v="134", "Not:A-Brand";v="24", "Microsoft Edge";v="134"',
+  "Sec-Ch-Ua-Mobile": "?0",
+  "Sec-Ch-Ua-Platform": '"Windows"',
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-site",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+}
+
 async function getAccessTokens() {
   try {
     const tokenData = await fs.readFile("tokens.txt", "utf8");
@@ -32,6 +53,62 @@ async function getAccessTokens() {
     console.error(
       chalk.red.bold(
         `[ERROR] Failed to read tokens from tokens.txt: ${error.message}`
+      )
+    );
+    throw error;
+  }
+}
+async function getInitDatas() {
+  try {
+    const initDatas = JSON.parse(await fs.readFile("initData.json", "utf8"));
+
+    if (initDatas.length === 0) {
+      throw new Error("No initDatas found in initData.json");
+    }
+    return initDatas;
+  } catch (error) {
+    console.error(
+      chalk.red.bold(
+        `[ERROR] Failed to read tokens from tokens.txt: ${error.message}`
+      )
+    );
+    throw error;
+  }
+}
+async function getTokenByLogin(initData, proxyAgent) {
+  try {
+    const config = {
+      headers: {
+        ...HEADERS
+      },
+    };
+    if (proxyAgent) {
+      if (proxyAgent.http && proxyAgent.https) {
+        config.httpAgent = proxyAgent.http;
+        config.httpsAgent = proxyAgent.https;
+      } else {
+        config.httpsAgent = proxyAgent;
+        config.httpAgent = proxyAgent;
+      }
+    }
+    const { data } = await axios({
+      url: 'https://api.walme.io/auth/twa',
+      method: 'POST',
+      headers: {
+        ...HEADERS,
+      },
+      data: initData,
+    })
+    if (data?.access_token) {
+      console.log(chalk.green(`✅ [SUCCESS] got token `));
+      return data.access_token
+    }
+    throw new Error("Failed to get access_token " + JSON.stringify(data))
+  } catch (error) {
+    console.log(error)
+    console.error(
+      chalk.red.bold(
+        `[ERROR] Failed to read tokens from Login API: ${error.message}`
       )
     );
     throw error;
@@ -110,9 +187,8 @@ function createProxyAgent(proxyString) {
     let httpAgent, httpsAgent;
 
     if (proxyType.startsWith("socks")) {
-      const socksUrl = `socks${proxyType.endsWith("5") ? "5" : "4"}://${
-        auth ? auth + "@" : ""
-      }${host}:${port}`;
+      const socksUrl = `socks${proxyType.endsWith("5") ? "5" : "4"}://${auth ? auth + "@" : ""
+        }${host}:${port}`;
       httpAgent = new SocksProxyAgent(socksUrl, {
         rejectUnauthorized: false,
       });
@@ -148,8 +224,8 @@ async function getUserProfile(token, proxyAgent) {
   try {
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
+        'X-Twa-Payload': `${token}`,
+        ...HEADERS
       },
     };
 
@@ -174,8 +250,7 @@ async function getUserProfile(token, proxyAgent) {
   } catch (error) {
     console.error(
       chalk.red.bold(
-        `[ERROR] Failed to fetch user profile: ${
-          error.response?.data?.message || error.message
+        `[ERROR] Failed to fetch user profile: ${error.response?.data?.message || error.message
         }`
       )
     );
@@ -187,8 +262,8 @@ async function getTasks(token, proxyAgent) {
   try {
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
+        'X-Twa-Payload': `${token}`,
+        ...HEADERS
       },
     };
 
@@ -207,8 +282,7 @@ async function getTasks(token, proxyAgent) {
   } catch (error) {
     console.error(
       chalk.red.bold(
-        `[ERROR] Failed to fetch task list: ${
-          error.response?.data?.message || error.message
+        `[ERROR] Failed to fetch task list: ${error.response?.data?.message || error.message
         }`
       )
     );
@@ -231,25 +305,9 @@ async function completeTask(taskId, token, proxyAgent) {
 
     const config = {
       headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-        "Content-Type": "application/json",
-        Origin: "https://waitlist.walme.io",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-        Priority: "u=1, i",
-        Recaptcha,
-        Referer: "https://waitlist.walme.io/",
-        "Sec-Ch-Ua":
-          '"Chromium";v="134", "Not:A-Brand";v="24", "Microsoft Edge";v="134"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-site",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0",
+        'X-Twa-Payload': `${token}`,
+        ...HEADERS,
+        Recaptcha
       },
     };
 
@@ -273,8 +331,7 @@ async function completeTask(taskId, token, proxyAgent) {
   } catch (error) {
     console.error(
       chalk.red.bold(
-        `[ERROR] Failed to process task ${taskId}: ${
-          error.response?.data?.message || error.message
+        `[ERROR] Failed to process task ${taskId}: ${error.response?.data?.message || error.message
         }`
       )
     );
@@ -404,18 +461,19 @@ async function runBot() {
 
     while (true) {
       console.log(chalk.white("🔑 [INFO] Fetching access tokens..."));
-      const tokens = await getAccessTokens();
+      const initDatas = await getInitDatas();
       console.log(
-        chalk.white(`🔑 [INFO] ${tokens.length} tokens fetched successfully`)
+        chalk.white(`🔑 [INFO] ${initDatas.length} initDatas fetched successfully`)
       );
 
       console.log(chalk.white("🌐 [INFO] Loading proxies..."));
       const proxies = await getProxies();
 
       console.log(chalk.cyan("─".repeat(40)));
+      console.log(initDatas)
 
-      for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
+      for (let i = 0; i < initDatas.length; i++) {
+        const initData = initDatas[i];
 
         let proxyAgent = null;
         if (proxies.length > 0) {
@@ -439,6 +497,8 @@ async function runBot() {
             );
           }
         }
+
+        const token = await getTokenByLogin(initData, proxyAgent)
 
         await processAccount(token, proxyAgent);
         await new Promise((resolve) => setTimeout(resolve, 2000));
